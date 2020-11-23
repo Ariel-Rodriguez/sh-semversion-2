@@ -8,28 +8,34 @@ SH script to compare versions using semversion 2.0 spec.
 
 #
 
+| Method   | Command                                                                                                |
+| :------- | :----------------------------------------------------------------------------------------------------- |
+| **curl** | `curl https://raw.githubusercontent.com/Ariel-Rodriguez/sh-semversion-2/main/semver2.sh -o semver2.sh` |
+| **wget** | `wget https://raw.githubusercontent.com/Ariel-Rodriguez/sh-semversion-2/main/semver2.sh`               |
+
+###
+
 <table>
 <thead>
 <tr>
 <th>Param 1</th>
 <th>Param 2</th>
-<th>Output</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Is greater</td>
-<td>Is lower</td>
+<td>1.0.0</td>
+<td>0.1.0</td>
 <td>1</td>
 </tr>
 <tr>
-<td>Is lower</td>
-<td>Is greater</td>
+<td>1.0.0-alpha</td>
+<td>1.0.0+metadata.build.1</td>
 <td>-1</td>
 </tr>
 <tr>
-<td>Is equal</td>
-<td>Is equal</td>
+<td>1.0.0+metadata.build.1</td>
+<td>1.0.0+metadata.build.2</td>
 <td>0</td>
 </tr>
 </tbody>
@@ -50,6 +56,31 @@ output  1
 ```
 
 ## Tests
+
+```sh
+./test.sh
+```
+
+```sh
+# semver2.0 happy path tests ordered by precedence
+# spec 11.4
+tests=(
+  1.0.0-0--1
+  1.0.0-0-0
+  1.0.0-0-0.alpha
+  1.0.0-0-1
+  1.0.0-alpha
+  1.0.0-alpha.1
+  1.0.0-alpha.beta
+  1.0.0-beta
+  1.0.0-beta.2
+  1.0.0-beta.11
+  1.0.0-rc.1
+  1.0.0+metadata.0.0.0
+  2.0.0-ALPHA
+  2.0.0-alpha
+)
+```
 
 ```sh
 OK 1.0.0-alpha = 1.0.0-alpha

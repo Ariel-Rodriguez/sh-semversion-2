@@ -9,7 +9,9 @@ source ./semver2.sh 1.0.0 1.0.0
 # spec 11.4
 # 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0.
 tests=(
+  1.0.0-0--1
   1.0.0-0-0
+  1.0.0-0-0.alpha
   1.0.0-0-1
   1.0.0-alpha
   1.0.0-alpha.1 
