@@ -145,7 +145,7 @@ semver_compare() {
   a_patch=$(printf %s "$version_a" | cut -d'.' -f 3 | cut -d'-' -f 1)
   a_pre=""
   if [ "$(includesString "$version_a" -)" = 1 ]; then
-    a_pre=$(printf %s "$version_a" | cut -d'-' -f 2)
+    a_pre=$(printf %s"${version_a#$a_major.$a_minor.$a_patch-}")
   fi
 
   b_major=$(printf %s "$version_b" | cut -d'.' -f 1)
@@ -153,7 +153,7 @@ semver_compare() {
   b_patch=$(printf %s "$version_b" | cut -d'.' -f 3 | cut -d'-' -f 1)
   b_pre=""
   if [ "$(includesString "$version_b" -)" = 1 ]; then
-    b_pre=$(printf %s "$version_b" | cut -d'-' -f 2)
+    b_pre=$(printf %s"${version_b#$b_major.$b_minor.$b_patch-}")
   fi
 
   unit_types="MAJOR MINOR PATCH"
@@ -323,4 +323,4 @@ semver_compare() {
   done
 }
 
-[ -n "$1" ] && printf "%s$(semver_compare "$@")\n"
+printf "%s$(semver_compare "$@")\n"
