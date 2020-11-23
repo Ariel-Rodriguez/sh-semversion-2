@@ -10,6 +10,7 @@ SH script to compare versions using semversion 2.0 spec.
 
 | Method   | Command                                                                                                |
 | :------- | :----------------------------------------------------------------------------------------------------- |
+| **npx**  | `npx --no-install git+https://github.com/Ariel-Rodriguez/sh-semversion-2.git 1.0.0 2.0.0`              |
 | **curl** | `curl https://raw.githubusercontent.com/Ariel-Rodriguez/sh-semversion-2/main/semver2.sh -o semver2.sh` |
 | **wget** | `wget https://raw.githubusercontent.com/Ariel-Rodriguez/sh-semversion-2/main/semver2.sh`               |
 
@@ -48,11 +49,13 @@ SH script to compare versions using semversion 2.0 spec.
 # Usage
 
 ```sh
-./semver2.sh 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
+npx sh-semversion-2 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
+# output 1
 ```
 
-```
-output  1
+```sh
+./semver2.sh 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
+# output  1
 ```
 
 ## Tests

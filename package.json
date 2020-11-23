@@ -2,7 +2,7 @@
   "name": "sh-semversion-2",
   "version": "1.0.1",
   "description": "POSIX tool for semversion",
-  "main": "semver2.sh",
+  "bin": "semver2.sh",
   "dependencies": {},
   "devDependencies": {
     "husky": "^4.3.0",
