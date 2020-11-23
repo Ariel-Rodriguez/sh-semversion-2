@@ -1,6 +1,6 @@
 {
   "name": "sh-semversion-2",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "POSIX tool for semversion",
   "main": "semver2.sh",
   "dependencies": {},
