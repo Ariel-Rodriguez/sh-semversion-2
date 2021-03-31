@@ -140,17 +140,17 @@ semver_compare() {
   version_b=$(printf %s "$secondParam" | cut -d'+' -f 1)
   version_b=$(removeLeadingV "$version_b")
 
-  a_major=$(printf %s "$version_a" | cut -d'.' -f 1)
-  a_minor=$(printf %s "$version_a" | cut -d'.' -f 2)
-  a_patch=$(printf %s "$version_a" | cut -d'.' -f 3 | cut -d'-' -f 1)
+  a_major=$(printf %s "$version_a" | cut -d'.' -f 1 | bc)
+  a_minor=$(printf %s "$version_a" | cut -d'.' -f 2 | bc)
+  a_patch=$(printf %s "$version_a" | cut -d'.' -f 3 | cut -d'-' -f 1 | bc)
   a_pre=""
   if [ "$(includesString "$version_a" -)" = 1 ]; then
     a_pre=$(printf %s"${version_a#$a_major.$a_minor.$a_patch-}")
   fi
 
-  b_major=$(printf %s "$version_b" | cut -d'.' -f 1)
-  b_minor=$(printf %s "$version_b" | cut -d'.' -f 2)
-  b_patch=$(printf %s "$version_b" | cut -d'.' -f 3 | cut -d'-' -f 1)
+  b_major=$(printf %s "$version_b" | cut -d'.' -f 1 | bc)
+  b_minor=$(printf %s "$version_b" | cut -d'.' -f 2 | bc)
+  b_patch=$(printf %s "$version_b" | cut -d'.' -f 3 | cut -d'-' -f 1 | bc)
   b_pre=""
   if [ "$(includesString "$version_b" -)" = 1 ]; then
     b_pre=$(printf %s"${version_b#$b_major.$b_minor.$b_patch-}")
