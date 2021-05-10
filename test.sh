@@ -14,15 +14,21 @@ tests=(
   1.0.0-0-0.alpha
   1.0.0-0-1
   1.0.0-alpha
-  1.0.0-alpha.1 
-  1.0.0-alpha.beta 
-  1.0.0-beta 
-  1.0.0-beta.2 
-  1.0.0-beta.11 
-  1.0.0-rc.1 
+  1.0.0-alpha.1
+  1.0.0-alpha.beta
+  1.0.0-beta
+  1.0.0-beta.2
+  1.0.0-beta.11
+  1.0.0-rc.1
   1.0.0+metadata.0.0.0
   2.0.0-ALPHA
   2.0.0-alpha
+  # leading zeroes
+  02.00.01-alpha
+  02.00.01
+  02.00.10
+  02.01.00
+  02.10.00
 )
 
 # others
@@ -46,7 +52,8 @@ tests=(
 
 _assert_is() {
   reason=""
-  if [ $3 != $4 ]; then
+
+  if [ "$3" != "$4" ]; then
     printf "FAILED "
     reason="expected to be $4 got $3"
   else
@@ -75,7 +82,7 @@ do
     expected="0"
     if [ "$j" -lt "$i" ]; then expected="1"; fi
     if [ "$j" -gt "$i" ]; then expected="-1"; fi
-    echo $(_assert_is ${tests[i]} ${tests[j]} $(semver_compare ${tests[i]} ${tests[j]}) "$expected")
+    printf "\n%s $(_assert_is "${tests[i]}" "${tests[j]}" "$(semver_compare "${tests[i]}" "${tests[j]}")" "$expected")"
   done
 done
 

@@ -101,7 +101,7 @@ compareString() {
 
     ord_a=$(ord "$a")
     ord_b=$(ord "$b")
-  
+
     if [ "$(compareNumber "$ord_a" "$ord_b")" != "0" ]; then
       printf "%s" "$(compareNumber "$ord_a" "$ord_b")"
       return
@@ -125,6 +125,17 @@ includesString() {
 
 removeLeadingV() {
   printf "%s${1#v}"
+}
+
+# https://github.com/Ariel-Rodriguez/sh-semversion-2/pull/2
+# Spec #2 https://semver.org/#spec-item-2
+# MUST NOT contain leading zeroes
+normalizeZero() {
+  next=$(printf %s "${1#0}")
+  if [ -z "$next" ]; then
+    printf %s "$1"
+  fi
+  printf %s "$next"
 }
 
 semver_compare() {
@@ -156,13 +167,20 @@ semver_compare() {
     b_pre=$(printf %s"${version_b#$b_major.$b_minor.$b_patch-}")
   fi
 
+  a_major=$(normalizeZero "$a_major")
+  a_minor=$(normalizeZero "$a_minor")
+  a_patch=$(normalizeZero "$a_patch")
+  b_major=$(normalizeZero "$b_major")
+  b_minor=$(normalizeZero "$b_minor")
+  b_patch=$(normalizeZero "$b_patch")
+
   unit_types="MAJOR MINOR PATCH"
   a_normalized="$a_major $a_minor $a_patch"
   b_normalized="$b_major $b_minor $b_patch"
 
   debug "Detected: $a_major $a_minor $a_patch identifiers: $a_pre"
   debug "Detected: $b_major $b_minor $b_patch identifiers: $b_pre"
-  
+
   #####
   #
   # Find difference between Major Minor or Patch
@@ -224,7 +242,7 @@ semver_compare() {
   do
     a=$(printf %s "$a_pre" | cut -d'.' -f $cursor)
     b=$(printf %s "$b_pre" | cut -d'.' -f $cursor)
-    
+
     debug "Comparing identifier $a with $b"
 
     # Exit when there is nothing else to compare.
@@ -247,7 +265,7 @@ semver_compare() {
       outcome "1"
       return
     fi
-      
+
     # When A is shorter than B
     if [ -z "$a" ] && [ -n "$b" ]; then
       debug "Because B has more pre-identifiers"
@@ -258,7 +276,7 @@ semver_compare() {
     # Spec #11.4.1
     # Identifiers consisting of only digits are compared numerically.
     if [ "$(isNumber "$a")" = "true" ] || [ "$(isNumber "$b")" = "true" ]; then
-      
+
       # if both identifiers are numbers, then compare and proceed
       if [ "$(isNumber "$a")" = "true" ] && [ "$(isNumber "$b")" = "true" ]; then
         if [ "$(compareNumber "$a" "$b")" != "0" ]; then
@@ -292,24 +310,24 @@ semver_compare() {
 
     # Edge case when there is single identifier exaple: x.y.z-beta
     if [ "$cursor" = 1 ]; then
-      
+
       # When both versions are single return equals
       if [ -n "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -n "$(isSingleIdentifier "$a_pre" "$a")" ]; then
         debug "Because both have single identifier"
         outcome "0"
         return
       fi
-      
+
       # Return greater when has more identifiers
       # Spec 11.4.4: A larger set of pre-release fields has a higher precedence than a smaller set, if all of the preceding identifiers are equal.
-      
+
       # When A is larger than B
       if [ -n "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -z "$(isSingleIdentifier "$a_pre" "$a")" ]; then
         debug "Because of single identifier, A has more pre-identifiers"
         outcome "1"
         return
       fi
-      
+
       # When A is shorter than B
       if [ -z "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -n "$(isSingleIdentifier "$a_pre" "$a")" ]; then
         debug "Because of single identifier, B has more pre-identifiers"
@@ -317,7 +335,7 @@ semver_compare() {
         return
       fi
     fi
-  
+
     # Proceed to the next identifier because previous comparition was equal.
     cursor=$((cursor + 1))
   done
