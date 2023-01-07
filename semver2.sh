@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# POSIX SH portable semver 2.0 comparition tool.
+# POSIX SH portable semver 2.0 comparison tool.
 
 # This bash script compares pre-releases alphabetically as well (number < lowerCaseLetter < upperCaseLetter)
 #
@@ -9,8 +9,8 @@
 # returns -1 when A lower than B
 #
 # Usage
-# chmod +x semver.sh
-# ./semver.sh 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
+# chmod +x semver2.sh
+# ./semver2.sh 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
 # --> 1
 #
 
