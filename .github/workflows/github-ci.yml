@@ -17,10 +17,10 @@ jobs:
         run: |
           chmod +x ${{ github.workspace }}/test.sh
       - name: test
-        run: ./${{ github.workspace }}/test.sh
+        run: .${{ github.workspace }}/test.sh
         shell: sh
   Windows-cmd:
-    runs-on: ubuntu-latest
+    runs-on: Windows
     steps:
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 Testing branch ${{ github.ref }}"
@@ -34,5 +34,5 @@ jobs:
         run: |
           chmod +x ${{ github.workspace }}/test.sh
       - name: test
-        run: ./${{ github.workspace }}/test.sh
+        run: .${{ github.workspace }}/test.sh
         shell: cmd
