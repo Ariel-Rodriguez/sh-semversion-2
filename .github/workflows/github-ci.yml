@@ -16,10 +16,9 @@ jobs:
       - name: Give executable permissions to test.sh 
         run: |
           chmod +x ${{ github.workspace }}/test.sh
-      - run: ls -lha
       - run: ls -lha ${{ github.workspace }}
       - name: test
-        run: test.sh
+        run: ${{ github.workspace }}/test.sh
         shell: sh
   Windows-cmd:
     runs-on: windows-latest
