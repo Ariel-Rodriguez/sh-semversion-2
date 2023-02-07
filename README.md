@@ -61,7 +61,7 @@ npx sh-semversion-2 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
 ## Tests
 
 ```sh
-./test.sh
+./test.sh print-only-failures
 ```
 
 ```sh

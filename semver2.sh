@@ -213,16 +213,15 @@ semver_compare() {
   fi
 
   # Spec 11.3 a pre-release version has lower precedence than a normal version:
-  # Example: 1.0.0-alpha < 1.0.0.
-
+  # 1.0.0 < 1.0.0-alpha
   if [ -z "$a_pre" ]; then
-    debug "Because a pre-release version has lower precedence than a normal version"
+    debug "Because A is the stable release. Pre-release version has lower precedence than a released version"
     outcome "1"
     return
   fi
-
+   # 1.0.0-alpha < 1.0.0
   if [ -z "$b_pre" ]; then
-    debug "Because a pre-release version has lower precedence than a normal version"
+    debug "Because B is the stable release. Pre-release version has lower precedence than a released version"
     outcome "-1"
     return
   fi
@@ -238,7 +237,7 @@ semver_compare() {
   }
 
   cursor=1
-  while [ $cursor -lt 4 ]
+  while [ $cursor -lt 5 ]
   do
     a=$(printf %s "$a_pre" | cut -d'.' -f $cursor)
     b=$(printf %s "$b_pre" | cut -d'.' -f $cursor)
@@ -259,16 +258,21 @@ semver_compare() {
     # MUST be determined by comparing each dot separated identifier from left to right until a difference is found
 
     # Spec 11.4.4: A larger set of pre-release fields has a higher precedence than a smaller set, if all of the preceding identifiers are equal.
+
     if [ -n "$a" ] && [ -z "$b" ]; then
-      # When A is larger than B
-      debug "Because A has more pre-identifiers"
+      # When A is larger than B and preidentifiers are 1+n
+      # 1.0.0-alpha.beta.1 1.0.0-alpha.beta
+      # 1.0.0-alpha.beta.1.2 1.0.0-alpha.beta.1
+      debug "Because A has larger set of pre-identifiers"
       outcome "1"
       return
     fi
 
-    # When A is shorter than B
+    # When A is shorter than B and preidentifiers are 1+n
+    # 1.0.0-alpha.beta 1.0.0-alpha.beta.d
+    # 1.0.0-alpha.beta 1.0.0-alpha.beta.1.2
     if [ -z "$a" ] && [ -n "$b" ]; then
-      debug "Because B has more pre-identifiers"
+      debug "Because B has larger set of pre-identifiers"
       outcome "-1"
       return
     fi
@@ -278,6 +282,7 @@ semver_compare() {
     if [ "$(isNumber "$a")" = "true" ] || [ "$(isNumber "$b")" = "true" ]; then
 
       # if both identifiers are numbers, then compare and proceed
+      # 1.0.0-beta.3 1.0.0-beta.2
       if [ "$(isNumber "$a")" = "true" ] && [ "$(isNumber "$b")" = "true" ]; then
         if [ "$(compareNumber "$a" "$b")" != "0" ]; then
           debug "Number is not equal $(compareNumber "$a" "$b")"
@@ -287,12 +292,15 @@ semver_compare() {
       fi
 
       # Spec 11.4.3
+      # 1.0.0-alpha.1 1.0.0-alpha.beta.d
+      # 1.0.0-beta.3 1.0.0-1.2
       if [ "$(isNumber "$a")" = "false" ]; then
         debug "Because Numeric identifiers always have lower precedence than non-numeric identifiers."
         outcome "1"
         return
       fi
-
+      # 1.0.0-alpha.d 1.0.0-alpha.beta.1
+      # 1.0.0-1.1 1.0.0-beta.1.2
       if [ "$(isNumber "$b")" = "false" ]; then
         debug "Because Numeric identifiers always have lower precedence than non-numeric identifiers."
         outcome "-1"
@@ -301,6 +309,7 @@ semver_compare() {
     else
       # Spec 11.4.2
       # Identifiers with letters or hyphens are compared lexically in ASCII sort order.
+      # 1.0.0-alpha 1.0.0-beta.alpha
       if [ "$(compareString "$a" "$b")" != "0" ]; then
         debug "cardinal is not equal $(compareString a b)"
         outcome "$(compareString "$a" "$b")"
@@ -312,6 +321,7 @@ semver_compare() {
     if [ "$cursor" = 1 ]; then
 
       # When both versions are single return equals
+      # 1.0.0-alpha 1.0.0-alpha
       if [ -n "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -n "$(isSingleIdentifier "$a_pre" "$a")" ]; then
         debug "Because both have single identifier"
         outcome "0"
@@ -322,6 +332,7 @@ semver_compare() {
       # Spec 11.4.4: A larger set of pre-release fields has a higher precedence than a smaller set, if all of the preceding identifiers are equal.
 
       # When A is larger than B
+      # 1.0.0-alpha.beta 1.0.0-alpha
       if [ -n "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -z "$(isSingleIdentifier "$a_pre" "$a")" ]; then
         debug "Because of single identifier, A has more pre-identifiers"
         outcome "1"
@@ -329,6 +340,7 @@ semver_compare() {
       fi
 
       # When A is shorter than B
+      # 1.0.0-alpha 1.0.0-alpha.beta
       if [ -z "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -n "$(isSingleIdentifier "$a_pre" "$a")" ]; then
         debug "Because of single identifier, B has more pre-identifiers"
         outcome "-1"
