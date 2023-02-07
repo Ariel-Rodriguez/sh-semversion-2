@@ -1,5 +1,7 @@
 # sh-semversion-2
 
+[![checks](https://github.com/Ariel-Rodriguez/sh-semversion-2/actions/workflows/github-ci.yml/badge.svg?branch=main)](https://github.com/Ariel-Rodriguez/sh-semversion-2/actions/workflows/github-ci.yml)
+
 SH script to compare versions using semversion 2.0 spec.
 
 - highly-cross-compatible shell compliant with the POSIX standard.
