@@ -19,10 +19,10 @@ jobs:
       - run: ls -lha
       - run: ls -lha ${{ github.workspace }}
       - name: test
-        run: .${{ github.workspace }}/test.sh
+        run: test.sh
         shell: sh
   Windows-cmd:
-    runs-on: Windows
+    runs-on: windows-latest
     steps:
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 Testing branch ${{ github.ref }}"
@@ -36,5 +36,5 @@ jobs:
         run: |
           chmod +x ${{ github.workspace }}/test.sh
       - name: test
-        run: .${{ github.workspace }}/test.sh
+        run: ${{ github.workspace }}/test.sh
         shell: cmd
