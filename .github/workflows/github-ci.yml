@@ -1,0 +1,38 @@
+name: CI
+run-name: Checks
+on: [push]
+jobs:
+  Linux-sh:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "🔎 Testing branch ${{ github.ref }}"
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+      - name: Give executable permissions to semver2.sh 
+        run: |
+          chmod +x ${{ github.workspace }}/semver2.sh
+      - name: Give executable permissions to test.sh 
+        run: |
+          chmod +x ${{ github.workspace }}/test.sh
+      - name: test
+        run: ./${{ github.workspace }}/test.sh
+        shell: sh
+  Windows-cmd:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "🔎 Testing branch ${{ github.ref }}"
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+      - name: Give executable permissions to semver2.sh 
+        run: |
+          chmod +x ${{ github.workspace }}/semver2.sh
+      - name: Give executable permissions to test.sh 
+        run: |
+          chmod +x ${{ github.workspace }}/test.sh
+      - name: test
+        run: ./${{ github.workspace }}/test.sh
+        shell: cmd
