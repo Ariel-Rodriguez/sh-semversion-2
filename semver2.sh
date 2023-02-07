@@ -264,7 +264,7 @@ semver_compare() {
       # 1.0.0-alpha.beta.1 1.0.0-alpha.beta
       # 1.0.0-alpha.beta.1.2 1.0.0-alpha.beta.1
       debug "Because A has larger set of pre-identifiers"
-      outcome "-1"
+      outcome "1"
       return
     fi
 

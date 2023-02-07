@@ -35,5 +35,5 @@ jobs:
         run: |
           chmod +x ${{ github.workspace }}/test.sh
       - name: test
-        run: ${{ github.workspace }}/test.sh
+        run: sh ${{ github.workspace }}/test.sh
         shell: cmd
