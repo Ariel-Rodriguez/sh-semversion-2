@@ -114,7 +114,7 @@ compareString() {
 includesString() {
   string="$1"
   substring="$2"
-  if [ "${string#*$substring}" != "$string" ]
+  if [ "${string#*"$substring"}" != "$string" ]
   then
     printf "1"
     return 1    # $substring is in $string
@@ -156,7 +156,7 @@ semver_compare() {
   a_patch=$(printf %s "$version_a" | cut -d'.' -f 3 | cut -d'-' -f 1)
   a_pre=""
   if [ "$(includesString "$version_a" -)" = 1 ]; then
-    a_pre=$(printf %s"${version_a#$a_major.$a_minor.$a_patch-}")
+    a_pre=$(printf %s"${version_a#"$a_major.$a_minor.$a_patch-"}")
   fi
 
   b_major=$(printf %s "$version_b" | cut -d'.' -f 1)
@@ -164,7 +164,7 @@ semver_compare() {
   b_patch=$(printf %s "$version_b" | cut -d'.' -f 3 | cut -d'-' -f 1)
   b_pre=""
   if [ "$(includesString "$version_b" -)" = 1 ]; then
-    b_pre=$(printf %s"${version_b#$b_major.$b_minor.$b_patch-}")
+    b_pre=$(printf %s"${version_b#"$b_major.$b_minor.$b_patch-"}")
   fi
 
   a_major=$(normalizeZero "$a_major")
