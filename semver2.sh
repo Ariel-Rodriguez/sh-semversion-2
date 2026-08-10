@@ -127,6 +127,17 @@ removeLeadingV() {
   printf "%s${1#v}"
 }
 
+cleanVersion() {
+  v="$1"
+  while true; do
+    case "$v" in
+      [0-9]*) break ;;
+      *) v="${v#?}" ;;
+    esac
+  done
+  printf "%s" "$v" | tr 'xX*' '000'
+}
+
 # https://github.com/Ariel-Rodriguez/sh-semversion-2/pull/2
 # Spec #2 https://semver.org/#spec-item-2
 # MUST NOT contain leading zeroes
@@ -147,8 +158,10 @@ semver_compare() {
   [ "$verbose" = "verbose" ] && set -x
 
   version_a=$(printf %s "$firstParam" | cut -d'+' -f 1)
+  version_a=$(cleanVersion "$version_a")
   version_a=$(removeLeadingV "$version_a")
   version_b=$(printf %s "$secondParam" | cut -d'+' -f 1)
+  version_b=$(cleanVersion "$version_b")
   version_b=$(removeLeadingV "$version_b")
 
   a_major=$(printf %s "$version_a" | cut -d'.' -f 1)
