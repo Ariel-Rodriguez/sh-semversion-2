@@ -60,13 +60,67 @@ npx sh-semversion-2 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
 # output  1
 ```
 
+## Caret and wildcard ranges
+
+Use `--satisfies VERSION RANGE` to check range membership. It prints `1` for a
+match or `0` for no match; both are successful checks (exit status `0`). Invalid
+versions, unsupported ranges, or missing arguments exit `2`, with a message on
+stderr and no stdout. Quote ranges to prevent the shell from expanding `*`.
+
+```sh
+./semver2.sh --satisfies 1.5.0 '^1.2.3' # 1
+./semver2.sh --satisfies 2.0.0 '^1.2.3' # 0
+./semver2.sh --satisfies 4.9.0 '4.x'    # 1
+./semver2.sh --satisfies 5.0.0 '4.x'    # 0
+```
+
+Single caret ranges and ranges with trailing wildcards use
+[npm's caret and X-range rules](https://github.com/npm/node-semver#advanced-range-syntax):
+
+| Range | Matches |
+| --- | --- |
+| `^1.2.3` | `1.2.3` up to, excluding, `2.0.0` |
+| `^0.2.3` | `0.2.3` up to, excluding, `0.3.0` |
+| `^0.0.3` | `0.0.3` only |
+| `4.x`, `4.X`, `4.*`, `4` | Any stable `4` release |
+| `4.2.x`, `4.2.*`, `4.2` | Any stable `4.2` release |
+| `*`, `x`, `X` | Any stable release |
+
+Partial caret ranges such as `^1.2`, `^0.x`, and `^0.0.x` are supported.
+Prereleases are excluded unless the range explicitly includes a prerelease on
+the same major/minor/patch version; for example, `^1.2.3-beta.2` accepts
+`1.2.3-beta.3` and `1.3.0`, but excludes `1.3.0-beta.1`. A full version without
+a caret or wildcard matches that version exactly, ignoring build metadata.
+The existing `v` prefix and leading zeroes in core version numbers also work
+in range checks. Compound ranges (`||`, comparisons, hyphen ranges) and `~`
+ranges are unsupported and produce an error. Wildcards must be trailing
+(`1.x.3` is invalid), and prerelease/build qualifiers require a full numeric range.
+
+Version `1.1.0` adds range matching while keeping two-version comparisons compatible.
+
 ## Tests
+
+The command prints `-1`, `0`, or `1` and exits successfully for comparisons.
+Missing version arguments produce a usage message on stderr and a nonzero exit status.
+The existing optional `v` prefix and leading zeroes in major, minor, and patch
+numbers are accepted. Numeric comparisons support numbers beyond shell integer
+limits, and prereleases can have any number of identifiers.
 
 ```sh
 ./test.sh print-only-failures
 # abort on first failure match
 ./test.sh print-only-failures early-exit=true
+# run the comparator with another POSIX shell
+TEST_SHELL=dash sh ./test.sh print-only-failures
+npm test
+npm run lint
 ```
+
+Tests run the actual CLI and check comparison output, exit status, and stderr.
+They cover the SemVer precedence examples in both directions, all original
+ordered pairs, large numbers, leading zeroes, long prereleases, build metadata,
+`v` prefixes, missing arguments, and caret/wildcard range boundaries and errors.
+The test runner can be called from any directory.
 
 ```sh
 # semver2.0 happy path tests ordered by precedence
