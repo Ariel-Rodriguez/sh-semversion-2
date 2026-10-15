@@ -1,356 +1,191 @@
 #!/bin/sh
 
 # POSIX SH portable semver 2.0 comparison tool.
-
-# This bash script compares pre-releases alphabetically as well (number < lowerCaseLetter < upperCaseLetter)
+# Numeric prerelease identifiers sort before non-numeric identifiers;
+# non-numeric identifiers are compared in ASCII order.
 #
-# returns 1 when A greater than B
-# returns 0 when A equals B
-# returns -1 when A lower than B
-#
-# Usage
-# chmod +x semver2.sh
-# ./semver2.sh 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
-# --> 1
-#
-
-# This software was built with the help of the following sources:
-# https://stackoverflow.com/a/58067270
-# https://www.unix.com/man-page/posix/1posix/cut/
-# https://stackoverflow.com/questions/51052475/how-to-iterate-over-the-characters-of-a-string-in-a-posix-shell-script
+# Prints 1 when A is greater than B, 0 when equal, -1 when lower.
+# Usage: ./semver2.sh 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
+# Spec: https://semver.org/spec/v2.0.0.html
 
 set -eu
 
 debug() {
-  if [ "$debug" = "debug" ]; then printf "DEBUG: %s$1 \n"; fi
+  if [ "$debug" = debug ]; then printf 'DEBUG: %s\n' "$1"; fi
 }
 
-# params char
-# returns Integer
 ord() {
   printf '%d' "'$1"
 }
 
-
 isNumber() {
-  string=$1
-  char=""
-  while true; do
-    substract="${string#?}"    # All but the first character of the string
-    char="${string%"$substract"}"    # Remove $rest, and you're left with the first character
-    string="$substract"
-    # no more chars to compare then success
-    if [ -z "$char" ]; then
-      printf "true"
-      return 1
-    fi
-    # break if some of the chars is not a number
-    if [ "$(ord "$char")" -lt 48 ] || [ "$(ord "$char")" -gt 57 ]; then
-      printf "false"
-      return 0
-    fi
-  done
-}
-
-# params string {String}, Index {Number}
-# returns char
-getChar() {
-  string=$1
-  index=$2
-  cursor=-1
-  char=""
-  while [ "$cursor" != "$index" ]; do
-    substract="${string#?}"    # All but the first character of the string
-    char="${string%"$substract"}"    # Remove $rest, and you're left with the first character
-    string="$substract"
-    cursor=$((cursor + 1))
-  done
-  printf "%s$char"
+  case "$1" in
+    ''|*[!0-9]*) printf 'false' ;;
+    *) printf 'true' ;;
+  esac
 }
 
 outcome() {
-  result=$1
-  printf "%s$result\n"
+  printf '%s\n' "$1"
 }
 
-
-compareNumber() {
-  if [ -z "$1" ] && [ -z "$2" ]; then
-    printf "%s" "0"
-    return
-  fi
-
-  [ $(($2 - $1)) -gt 0 ] && printf "%s" "-1"
-  [ $(($2 - $1)) -lt 0 ] && printf "1"
-  [ $(($2 - $1)) = 0 ] && printf "0"
+# Preserve the existing leading-zero extension without octal arithmetic.
+normalizeZero() {
+  next=$1
+  while [ "${#next}" -gt 1 ] && [ "${next#0}" != "$next" ]; do
+    next=${next#0}
+  done
+  printf '%s' "$next"
 }
 
 compareString() {
-  result=false
-  index=0
-  while true
-  do
-    a=$(getChar "$1" $index)
-    b=$(getChar "$2" $index)
-
-    if [ -z "$a" ] && [ -z "$b" ]
-    then
-      printf "0"
+  while [ -n "$1" ] && [ -n "$2" ]; do
+    rest_a=${1#?}
+    rest_b=${2#?}
+    ord_a=$(ord "${1%"$rest_a"}")
+    ord_b=$(ord "${2%"$rest_b"}")
+    if [ "$ord_a" -lt "$ord_b" ]; then
+      printf '%s' -1
       return
     fi
-
-    ord_a=$(ord "$a")
-    ord_b=$(ord "$b")
-
-    if [ "$(compareNumber "$ord_a" "$ord_b")" != "0" ]; then
-      printf "%s" "$(compareNumber "$ord_a" "$ord_b")"
+    if [ "$ord_a" -gt "$ord_b" ]; then
+      printf '1'
       return
     fi
-
-    index=$((index + 1))
+    set -- "$rest_a" "$rest_b"
   done
-}
-
-includesString() {
-  string="$1"
-  substring="$2"
-  if [ "${string#*"$substring"}" != "$string" ]
-  then
-    printf "1"
-    return 1    # $substring is in $string
+  if [ -n "$1" ]; then
+    printf '1'
+  elif [ -n "$2" ]; then
+    printf '%s' -1
+  else
+    printf '0'
   fi
-  printf "0"
-  return 0    # $substring is not in $string
 }
 
-removeLeadingV() {
-  printf "%s${1#v}"
-}
+compareNumber() {
+  number_a=$(normalizeZero "$1")
+  number_b=$(normalizeZero "$2")
 
-# https://github.com/Ariel-Rodriguez/sh-semversion-2/pull/2
-# Spec #2 https://semver.org/#spec-item-2
-# MUST NOT contain leading zeroes
-normalizeZero() {
-  next=$(printf %s "${1#0}")
-  if [ -z "$next" ]; then
-    printf %s "$1"
+  # SemVer puts no integer-size limit on numeric identifiers. Compare their
+  # lengths, then their digits, instead of overflowing shell arithmetic.
+  if [ "${#number_a}" -lt "${#number_b}" ]; then
+    printf '%s' -1
+  elif [ "${#number_a}" -gt "${#number_b}" ]; then
+    printf '1'
+  else
+    compareString "$number_a" "$number_b"
   fi
-  printf %s "$next"
 }
 
 semver_compare() {
-  firstParam=$1 #1.2.4-alpha.beta+METADATA
-  secondParam=$2 #1.2.4-alpha.beta.2+METADATA
+  firstParam=$1
+  secondParam=$2
   debug=${3:-1}
   verbose=${4:-1}
 
-  [ "$verbose" = "verbose" ] && set -x
+  if [ "$verbose" = verbose ]; then set -x; fi
 
-  version_a=$(printf %s "$firstParam" | cut -d'+' -f 1)
-  version_a=$(removeLeadingV "$version_a")
-  version_b=$(printf %s "$secondParam" | cut -d'+' -f 1)
-  version_b=$(removeLeadingV "$version_b")
+  # Spec 10: build metadata never affects precedence.
+  version_a=${firstParam%%+*}
+  version_a=${version_a#v}
+  version_b=${secondParam%%+*}
+  version_b=${version_b#v}
 
-  a_major=$(printf %s "$version_a" | cut -d'.' -f 1)
-  a_minor=$(printf %s "$version_a" | cut -d'.' -f 2)
-  a_patch=$(printf %s "$version_a" | cut -d'.' -f 3 | cut -d'-' -f 1)
-  a_pre=""
-  if [ "$(includesString "$version_a" -)" = 1 ]; then
-    a_pre=$(printf %s"${version_a#"$a_major.$a_minor.$a_patch-"}")
-  fi
+  a_core=${version_a%%-*}
+  b_core=${version_b%%-*}
+  a_pre=${version_a#"$a_core"}
+  a_pre=${a_pre#-}
+  b_pre=${version_b#"$b_core"}
+  b_pre=${b_pre#-}
 
-  b_major=$(printf %s "$version_b" | cut -d'.' -f 1)
-  b_minor=$(printf %s "$version_b" | cut -d'.' -f 2)
-  b_patch=$(printf %s "$version_b" | cut -d'.' -f 3 | cut -d'-' -f 1)
-  b_pre=""
-  if [ "$(includesString "$version_b" -)" = 1 ]; then
-    b_pre=$(printf %s"${version_b#"$b_major.$b_minor.$b_patch-"}")
-  fi
-
-  a_major=$(normalizeZero "$a_major")
-  a_minor=$(normalizeZero "$a_minor")
-  a_patch=$(normalizeZero "$a_patch")
-  b_major=$(normalizeZero "$b_major")
-  b_minor=$(normalizeZero "$b_minor")
-  b_patch=$(normalizeZero "$b_patch")
-
-  unit_types="MAJOR MINOR PATCH"
-  a_normalized="$a_major $a_minor $a_patch"
-  b_normalized="$b_major $b_minor $b_patch"
+  a_major=${a_core%%.*}
+  a_rest=${a_core#*.}
+  a_minor=${a_rest%%.*}
+  a_patch=${a_rest#*.}
+  b_major=${b_core%%.*}
+  b_rest=${b_core#*.}
+  b_minor=${b_rest%%.*}
+  b_patch=${b_rest#*.}
 
   debug "Detected: $a_major $a_minor $a_patch identifiers: $a_pre"
   debug "Detected: $b_major $b_minor $b_patch identifiers: $b_pre"
 
-  #####
-  #
-  # Find difference between Major Minor or Patch
-  #
-
-  cursor=1
-  while [ "$cursor" -lt 4 ]
-  do
-    a=$(printf %s "$a_normalized" | cut -d' ' -f $cursor)
-    b=$(printf %s "$b_normalized" | cut -d' ' -f $cursor)
-    if [ "$a" != "$b" ]
-    then
-      debug "$(printf %s "$unit_types" | cut -d' ' -f $cursor) is different"
-      outcome "$(compareNumber "$a" "$b")"
+  # Spec 11.2: the first different core component decides precedence.
+  set -- MAJOR "$a_major" "$b_major" MINOR "$a_minor" "$b_minor" PATCH "$a_patch" "$b_patch"
+  while [ "$#" -gt 0 ]; do
+    result=$(compareNumber "$2" "$3")
+    if [ "$result" != 0 ]; then
+      debug "$1 is different"
+      outcome "$result"
       return
-    fi;
-    debug "$(printf "%s" "$unit_types" | cut -d' ' -f $cursor) are equal"
-    cursor=$((cursor + 1))
+    fi
+    debug "$1 are equal"
+    shift 3
   done
 
-  #####
-  #
-  # Find difference between pre release identifiers
-  #
-
+  # Spec 11.3: a normal release sorts after any prerelease.
   if [ -z "$a_pre" ] && [ -z "$b_pre" ]; then
-    debug "Because both are equals"
-    outcome "0"
+    outcome 0
     return
   fi
-
-  # Spec 11.3 a pre-release version has lower precedence than a normal version:
-  # 1.0.0 < 1.0.0-alpha
   if [ -z "$a_pre" ]; then
-    debug "Because A is the stable release. Pre-release version has lower precedence than a released version"
-    outcome "1"
+    outcome 1
     return
   fi
-   # 1.0.0-alpha < 1.0.0
   if [ -z "$b_pre" ]; then
-    debug "Because B is the stable release. Pre-release version has lower precedence than a released version"
-    outcome "-1"
+    outcome -1
     return
   fi
 
-
-  isSingleIdentifier() {
-    substract="${2#?}"
-    if [ "${1%"$2"}" = "" ]; then
-      printf "true"
-      return 1;
-    fi
-    return 0
-  }
-
-  cursor=1
-  while [ $cursor -lt 5 ]
-  do
-    a=$(printf %s "$a_pre" | cut -d'.' -f $cursor)
-    b=$(printf %s "$b_pre" | cut -d'.' -f $cursor)
-
+  # Spec 11.4: consume every identifier, with no fixed field limit.
+  while [ -n "$a_pre" ] || [ -n "$b_pre" ]; do
+    a=${a_pre%%.*}
+    b=${b_pre%%.*}
     debug "Comparing identifier $a with $b"
 
-    # Exit when there is nothing else to compare.
-    # Most likely because they are equals
-    if [ -z "$a" ] && [ -z "$b" ]
-    then
-      debug "are equals"
-      outcome "0"
+    # Equal prefixes: the version with more identifiers sorts later.
+    if [ -z "$a" ]; then
+      outcome -1
       return
-    fi;
-
-    # Spec #11 https://semver.org/#spec-item-11
-    # Precedence for two pre-release versions with the same major, minor, and patch version
-    # MUST be determined by comparing each dot separated identifier from left to right until a difference is found
-
-    # Spec 11.4.4: A larger set of pre-release fields has a higher precedence than a smaller set, if all of the preceding identifiers are equal.
-
-    if [ -n "$a" ] && [ -z "$b" ]; then
-      # When A is larger than B and preidentifiers are 1+n
-      # 1.0.0-alpha.beta.1 1.0.0-alpha.beta
-      # 1.0.0-alpha.beta.1.2 1.0.0-alpha.beta.1
-      debug "Because A has larger set of pre-identifiers"
-      outcome "1"
+    fi
+    if [ -z "$b" ]; then
+      outcome 1
       return
     fi
 
-    # When A is shorter than B and preidentifiers are 1+n
-    # 1.0.0-alpha.beta 1.0.0-alpha.beta.d
-    # 1.0.0-alpha.beta 1.0.0-alpha.beta.1.2
-    if [ -z "$a" ] && [ -n "$b" ]; then
-      debug "Because B has larger set of pre-identifiers"
-      outcome "-1"
-      return
-    fi
-
-    # Spec #11.4.1
-    # Identifiers consisting of only digits are compared numerically.
-    if [ "$(isNumber "$a")" = "true" ] || [ "$(isNumber "$b")" = "true" ]; then
-
-      # if both identifiers are numbers, then compare and proceed
-      # 1.0.0-beta.3 1.0.0-beta.2
-      if [ "$(isNumber "$a")" = "true" ] && [ "$(isNumber "$b")" = "true" ]; then
-        if [ "$(compareNumber "$a" "$b")" != "0" ]; then
-          debug "Number is not equal $(compareNumber "$a" "$b")"
-          outcome "$(compareNumber "$a" "$b")"
-          return
-        fi
-      fi
-
-      # Spec 11.4.3
-      # 1.0.0-alpha.1 1.0.0-alpha.beta.d
-      # 1.0.0-beta.3 1.0.0-1.2
-      if [ "$(isNumber "$a")" = "false" ]; then
-        debug "Because Numeric identifiers always have lower precedence than non-numeric identifiers."
-        outcome "1"
-        return
-      fi
-      # 1.0.0-alpha.d 1.0.0-alpha.beta.1
-      # 1.0.0-1.1 1.0.0-beta.1.2
-      if [ "$(isNumber "$b")" = "false" ]; then
-        debug "Because Numeric identifiers always have lower precedence than non-numeric identifiers."
-        outcome "-1"
-        return
-      fi
+    a_numeric=$(isNumber "$a")
+    b_numeric=$(isNumber "$b")
+    if [ "$a_numeric" = true ] && [ "$b_numeric" = true ]; then
+      result=$(compareNumber "$a" "$b")
+    elif [ "$a_numeric" = true ]; then
+      result=-1
+    elif [ "$b_numeric" = true ]; then
+      result=1
     else
-      # Spec 11.4.2
-      # Identifiers with letters or hyphens are compared lexically in ASCII sort order.
-      # 1.0.0-alpha 1.0.0-beta.alpha
-      if [ "$(compareString "$a" "$b")" != "0" ]; then
-        debug "cardinal is not equal $(compareString a b)"
-        outcome "$(compareString "$a" "$b")"
-        return
-      fi
+      result=$(compareString "$a" "$b")
+    fi
+    if [ "$result" != 0 ]; then
+      outcome "$result"
+      return
     fi
 
-    # Edge case when there is single identifier exaple: x.y.z-beta
-    if [ "$cursor" = 1 ]; then
-
-      # When both versions are single return equals
-      # 1.0.0-alpha 1.0.0-alpha
-      if [ -n "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -n "$(isSingleIdentifier "$a_pre" "$a")" ]; then
-        debug "Because both have single identifier"
-        outcome "0"
-        return
-      fi
-
-      # Return greater when has more identifiers
-      # Spec 11.4.4: A larger set of pre-release fields has a higher precedence than a smaller set, if all of the preceding identifiers are equal.
-
-      # When A is larger than B
-      # 1.0.0-alpha.beta 1.0.0-alpha
-      if [ -n "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -z "$(isSingleIdentifier "$a_pre" "$a")" ]; then
-        debug "Because of single identifier, A has more pre-identifiers"
-        outcome "1"
-        return
-      fi
-
-      # When A is shorter than B
-      # 1.0.0-alpha 1.0.0-alpha.beta
-      if [ -z "$(isSingleIdentifier "$b_pre" "$b")" ] && [ -n "$(isSingleIdentifier "$a_pre" "$a")" ]; then
-        debug "Because of single identifier, B has more pre-identifiers"
-        outcome "-1"
-        return
-      fi
-    fi
-
-    # Proceed to the next identifier because previous comparition was equal.
-    cursor=$((cursor + 1))
+    case "$a_pre" in
+      *.*) a_pre=${a_pre#*.} ;;
+      *) a_pre='' ;;
+    esac
+    case "$b_pre" in
+      *.*) b_pre=${b_pre#*.} ;;
+      *) b_pre='' ;;
+    esac
   done
+  outcome 0
 }
 
-printf "%s$(semver_compare "$@")\n"
+if [ "$#" -lt 2 ]; then
+  printf 'Usage: %s VERSION_A VERSION_B [debug] [verbose]\n' "$0" >&2
+  exit 1
+fi
+
+# Call directly so a comparison failure cannot be hidden by printf's status.
+semver_compare "$@"

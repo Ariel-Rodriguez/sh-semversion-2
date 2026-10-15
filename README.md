@@ -62,11 +62,26 @@ npx sh-semversion-2 1.0.0-rc.0.a+metadata v1.0.0-rc.0+metadata
 
 ## Tests
 
+The command prints `-1`, `0`, or `1` and exits successfully for comparisons.
+Missing version arguments produce a usage message on stderr and a nonzero exit status.
+The existing optional `v` prefix and leading zeroes in major, minor, and patch
+numbers are accepted. Numeric comparisons support numbers beyond shell integer
+limits, and prereleases can have any number of identifiers.
+
 ```sh
 ./test.sh print-only-failures
 # abort on first failure match
 ./test.sh print-only-failures early-exit=true
+# run the comparator with another POSIX shell
+TEST_SHELL=dash sh ./test.sh print-only-failures
+npm test
+npm run lint
 ```
+
+Tests run the actual CLI and check comparison output, exit status, and stderr.
+They cover the SemVer precedence examples in both directions, all original
+ordered pairs, large numbers, leading zeroes, long prereleases, build metadata,
+`v` prefixes, and missing arguments. The test runner can be called from any directory.
 
 ```sh
 # semver2.0 happy path tests ordered by precedence
