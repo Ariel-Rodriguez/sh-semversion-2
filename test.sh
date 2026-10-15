@@ -41,17 +41,26 @@ record_result() {
 # Exercise the real command, including its exit status and stderr.
 assert_compare() {
   expected=$1
-  a=$2
-  b=$3
+  shift
   status=0
-  "$test_shell" "$script_dir/semver2.sh" "$a" "$b" >"$test_tmp/stdout" 2>"$test_tmp/stderr" || status=$?
+  "$test_shell" "$script_dir/semver2.sh" "$@" >"$test_tmp/stdout" 2>"$test_tmp/stderr" || status=$?
   printf '%s\n' "$expected" >"$test_tmp/expected"
   if [ "$status" -eq 0 ] && cmp -s "$test_tmp/expected" "$test_tmp/stdout" && [ ! -s "$test_tmp/stderr" ]; then
-    record_result true "$a vs $b: $expected"
+    record_result true "$*: $expected"
   else
     actual=$(cat "$test_tmp/stdout")
-    record_result false "$a vs $b: expected $expected followed by one newline, got '$actual' (status $status)"
+    record_result false "$*: expected $expected followed by one newline, got '$actual' (status $status)"
   fi
+}
+
+assert_range_error() {
+  status=0
+  "$test_shell" "$script_dir/semver2.sh" --satisfies "$@" >"$test_tmp/stdout" 2>"$test_tmp/stderr" || status=$?
+  passed=false
+  if [ "$status" -eq 2 ] && [ ! -s "$test_tmp/stdout" ] && [ -s "$test_tmp/stderr" ]; then
+    passed=true
+  fi
+  record_result "$passed" "invalid range check '$*': expected status 2, stderr and no stdout (status $status)"
 }
 
 assert_usage() {
@@ -184,4 +193,104 @@ CASES
 
 assert_usage
 assert_usage 1.0.0
+
+# Issue #1: caret/X-ranges use membership rather than version ordering.
+while read -r expected version range; do
+  assert_compare "$expected" --satisfies "$version" "$range"
+done <<'RANGES'
+1 1.2.3 ^1.2.3
+1 1.9.9 ^1.2.3
+0 1.2.2 ^1.2.3
+0 2.0.0 ^1.2.3
+0 0.9.9 ^1.2.3
+1 0.2.3 ^0.2.3
+1 0.2.99 ^0.2.3
+0 0.2.2 ^0.2.3
+0 0.3.0 ^0.2.3
+0 1.0.0 ^0.2.3
+1 0.0.3 ^0.0.3
+0 0.0.2 ^0.0.3
+0 0.0.4 ^0.0.3
+1 0.0.0 ^0.0.0
+0 0.0.1 ^0.0.0
+1 1.99.99 ^1
+0 2.0.0 ^1
+1 0.99.99 ^0
+0 1.0.0 ^0
+1 0.0.99 ^0.0
+0 0.1.0 ^0.0
+1 1.2.0 ^1.2
+1 1.9.9 ^1.2
+0 1.1.99 ^1.2
+1 0.0.99 ^0.0.x
+0 0.1.0 ^0.0.x
+1 0.99.99 ^0.x
+0 1.0.0 ^0.x
+1 1.99.99 ^1.2.x
+0 2.0.0 ^1.2.x
+1 9.9.9 ^*
+1 0.0.0 *
+1 9.9.9 *
+1 9.9.9 x
+1 9.9.9 X
+1 4.0.0 4.x
+1 4.99.99 4.x
+0 3.99.99 4.x
+0 5.0.0 4.x
+1 4.1.9 4.X
+1 4.1.9 4.*
+1 4.1.9 4.x.x
+1 4.1.9 4.*.*
+1 4.2.0 4.2.x
+1 4.2.99 4.2.x
+0 4.1.99 4.2.x
+0 4.3.0 4.2.x
+1 4.2.9 4.2.X
+1 4.2.9 4.2.*
+1 4.99.99 4
+0 5.0.0 4
+1 4.2.99 4.2
+0 4.3.0 4.2
+1 1.2.3 1.2.3
+0 1.2.4 1.2.3
+0 1.2.2 1.2.3
+0 1.2.3-beta *
+0 4.2.0-beta 4.x
+0 1.3.0-beta ^1.2.3
+0 2.0.0-beta ^1.2.3
+1 1.2.3-beta.2 ^1.2.3-beta.2
+1 1.2.3-beta.3 ^1.2.3-beta.2
+0 1.2.3-beta.1 ^1.2.3-beta.2
+1 1.2.3 ^1.2.3-beta.2
+1 1.3.0 ^1.2.3-beta.2
+0 1.3.0-beta.3 ^1.2.3-beta.2
+1 0.0.3-beta.2 ^0.0.3-beta
+1 0.0.3 ^0.0.3-beta
+0 0.0.4-alpha ^0.0.3-beta
+1 1.2.3-beta 1.2.3-beta
+0 1.2.3-beta.1 1.2.3-beta
+0 1.2.3 1.2.3-beta
+1 1.2.3+build.2 1.2.3+build.1
+1 v1.5.0 ^v1.2.3
+1 v4.2.3 v4.x
+1 0004.0002.0003 4.2.x
+1 4.2.3 0004.0002.x
+1 1.2.3-alpha+build ^01.02.03-alpha+meta
+1 18446744073709551616.9.9 ^18446744073709551616.0.0
+0 18446744073709551617.0.0 ^18446744073709551616.0.0
+1 1.18446744073709551616.9 1.18446744073709551616.x
+0 1.18446744073709551617.0 1.18446744073709551616.x
+1 0.0.18446744073709551616 ^0.0.18446744073709551616
+0 0.0.18446744073709551617 ^0.0.18446744073709551616
+RANGES
+
+for invalid_version in '' 1.2 1.2.x 1.2.3.4 a.b.c 1.2.-3 1.2.3-01 1.2.3- 1.2.3+ 1.2.3-a..b 1.2.3+a..b '1.2.3+a%' '1.2.3-é' '1.2.3+é'; do
+  assert_range_error "$invalid_version" '*'
+done
+for invalid_range in '' '^' '^v' '^^1.2.3' '~1.2.3' '>=1.0.0' '1.x || 2.x' 1.2.3.4 1..2 1.2. '^1.2.3-' '^1.2.3-01' '1.x-beta' '1.2.3+a%' 1.x.3 '*.2.3' '1.*.0' '^1.x.3' '^1.2.3-é'; do
+  assert_range_error 1.2.3 "$invalid_range"
+done
+assert_range_error
+assert_range_error 1.2.3
+assert_range_error 1.2.3 '^1.2.3' extra
 finish
